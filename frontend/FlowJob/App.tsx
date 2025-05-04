@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message'; // Import Toast
 import RootNavigator from './src/navigation/RootNavigator'; // Adjust path if needed
 import { theme, useCustomFonts } from './src/styles/theme'; // Import theme and font hook
-
+// Import your custom fonts and theme
 export default function App() {
   // Load custom fonts
   const [fontsLoaded, fontError] = useCustomFonts();
