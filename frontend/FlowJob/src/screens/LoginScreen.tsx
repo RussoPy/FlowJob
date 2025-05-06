@@ -1,7 +1,7 @@
 // src/screens/LoginScreen.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Animated, Easing, ScrollView, StyleSheet } from 'react-native';
+import { View, Animated, Easing, ScrollView, StyleSheet, I18nManager } from 'react-native'; // Added I18nManager
 import {
   TextInput as PaperTextInput,
   Button as PaperButton,
@@ -24,9 +24,9 @@ const ensureUserProfileExists = async () => {
 };
 
 // Define LoginScreenProps using NativeStackScreenProps if not already defined
-type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+// type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>; // Already provided by user
 
-export default function LoginScreen({ navigation }: LoginScreenProps) {
+export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackParamList, 'Login'>) {
   const theme = useAppTheme(); // Use your custom typed theme hook
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,30 +46,31 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Toast.show({ type: 'error', text1: 'Missing fields', text2: 'Please enter both email and password.' });
+      // Assuming Toast messages are already translated or will be handled by an i18n library
+      Toast.show({ type: 'error', text1: 'שדות חסרים', text2: 'אנא הזן אימייל וסיסמה.' });
       return;
     }
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
       await ensureUserProfileExists();
-      Toast.show({ type: 'success', text1: 'Login Successful!', text2: 'Welcome back 👋' });
+      Toast.show({ type: 'success', text1: 'התחברת בהצלחה!', text2: 'ברוך שובך 👋' });
       navigation.replace('Home'); // Adjust 'Home' as needed
     } catch (error: any) {
       console.error("Login Error:", error.code, error.message);
-      let message = 'An unknown error occurred.';
+      let message = 'אירעה שגיאה לא ידועה.'; // Default Hebrew error
       if (error.code) {
         switch (error.code) {
-          case 'auth/invalid-email': message = 'Please enter a valid email address.'; break;
+          case 'auth/invalid-email': message = 'אנא הזן כתובת אימייל חוקית.'; break;
           case 'auth/user-not-found':
           case 'auth/wrong-password':
-          case 'auth/invalid-credential': message = 'Invalid email or password.'; break;
-          case 'auth/too-many-requests': message = 'Too many attempts. Please try again later or reset your password.'; break;
-          case 'auth/user-disabled': message = 'This account has been disabled.'; break;
-          default: message = `Login failed: ${error.message || 'Please try again.'}`;
+          case 'auth/invalid-credential': message = 'אימייל או סיסמה שגויים.'; break;
+          case 'auth/too-many-requests': message = 'ניסיונות רבים מדי. אנא נסה שוב מאוחר יותר או אפס סיסמה.'; break;
+          case 'auth/user-disabled': message = 'חשבון זה נחסם.'; break;
+          default: message = `ההתחברות נכשלה: ${error.message || 'אנא נסה שוב.'}`;
         }
       }
-      Toast.show({ type: 'error', text1: 'Login Failed', text2: message });
+      Toast.show({ type: 'error', text1: 'ההתחברות נכשלה', text2: message });
     } finally {
       setLoading(false);
     }
@@ -86,36 +87,36 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     >
       <View style={styles.header}>
         <PaperText variant="headlineLarge" style={styles.headerText}>
-          Welcome Back
+          FlowJob
         </PaperText>
         <PaperText variant="bodyMedium" style={styles.subHeaderText}>
-          Let's continue your journey 🚀
+         ברוך הבא
         </PaperText>
       </View>
 
       <View style={styles.form}>
         <PaperTextInput
-          label="Email"
+          label="אימייל" // Translated
           value={email}
           onChangeText={setEmail}
           mode="outlined"
-          style={styles.input}
+          style={styles.input} // Contains textAlign: 'right' for explicit RTL input
           keyboardType="email-address"
           autoCapitalize="none"
-          theme={{ roundness: theme.roundness }} // Paper components pick up roundness from theme
+          theme={{ roundness: theme.roundness }}
         />
         <PaperTextInput
-          label="Password"
+          label="סיסמה" // Translated
           value={password}
           onChangeText={setPassword}
           mode="outlined"
-          style={styles.input}
+          style={styles.input} // Contains textAlign: 'right'
           secureTextEntry={!showPassword}
           right={
             <PaperTextInput.Icon
               icon={showPassword ? "eye-off" : "eye"}
               onPress={() => setShowPassword(!showPassword)}
-              color={theme.colors.onSurfaceVariant} // Using a more specific theme color
+              color={theme.colors.onSurfaceVariant}
             />
           }
           theme={{ roundness: theme.roundness }}
@@ -128,7 +129,9 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
               onValueChange={setRememberMe}
               color={theme.colors.primary}
             />
-            <PaperText variant='bodyMedium' style={styles.rememberMeText}>Remember Me</PaperText>
+            <PaperText variant='bodyMedium' style={styles.rememberMeText}>
+              זכור אותי
+            </PaperText>
           </View>
           {loading && <PaperActivityIndicator animating={true} color={theme.colors.primary} size='small' />}
         </View>
@@ -139,21 +142,21 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           loading={loading}
           disabled={loading}
           style={styles.button}
-          contentStyle={styles.buttonContent} // For inner padding
-          // labelStyle={styles.buttonLabel} // Should be handled by theme.fonts.labelLarge
+          contentStyle={styles.buttonContent}
         >
-          Login
+          כניסה
         </PaperButton>
       </View>
 
       <View style={styles.footer}>
-        <PaperText variant='bodyMedium' style={{ color: theme.colors.onSurface }}>
-          New here?{' '}
+        {/* Added writingDirection: 'rtl' for robust mixed content rendering */}
+        <PaperText variant='bodyMedium' style={[styles.footerTextBase, { writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+          חדש פה?{' '}
           <PaperText
             onPress={() => !loading && navigation.navigate('Register')}
             style={styles.registerLink}
           >
-            Register
+            הרשמה
           </PaperText>
         </PaperText>
       </View>
@@ -169,66 +172,69 @@ const makeStyles = (theme: AppTheme) => StyleSheet.create({
   },
   container: {
     flexGrow: 1,
-    padding: theme.spacing.l, // Use theme spacing
+    padding: theme.spacing.l,
     justifyContent: 'center',
   },
   header: {
-    marginBottom: theme.spacing.xl, // Use theme spacing
+    marginBottom: theme.spacing.xl,
     alignItems: 'center',
   },
   headerText: {
-    color: theme.colors.primary, // Directly use theme color
-    textAlign: 'center',
+    color: theme.colors.primary,
+    textAlign: 'center', // Center alignment is fine for headers
     // Font variant handles font family, size, weight from theme.fonts
   },
   subHeaderText: {
-    color: theme.colors.onSurface, // Directly use theme color
-    textAlign: 'center',
-    marginTop: theme.spacing.s, // Use theme spacing
+    color: theme.colors.onSurface,
+    textAlign: 'center', // Center alignment is fine
+    marginTop: theme.spacing.s,
   },
   form: {
     width: '100%',
   },
   input: {
-    marginBottom: theme.spacing.m, // Use theme spacing
-    // backgroundColor: 'transparent', // Default for outlined PaperTextInput
+    marginBottom: theme.spacing.m,
+    // Explicitly set textAlign for TextInput if global RTL doesn't suffice
+    // or if PaperTextInput doesn't automatically align placeholder/text to right in RTL.
+    // For Hebrew, text should naturally flow RTL.
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   optionsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Will be reversed in RTL
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.m, // Use theme spacing
+    marginBottom: theme.spacing.m,
     minHeight: 40,
   },
   switchContainer: {
-    flexDirection: 'row',
+    flexDirection: 'row', // Switch appears first (right in RTL), then text
     alignItems: 'center',
   },
   rememberMeText: {
-    marginLeft: theme.spacing.s, // Use theme spacing
+    // If visual order in RTL is [Text] [Switch], marginRight creates space.
+    // If LTR was [Switch] [Text], and RTL reverses to [Text] [Switch],
+    // then the text needs margin on its right to space it from the switch.
+    marginRight: I18nManager.isRTL ? theme.spacing.s : 0,
+    marginLeft: !I18nManager.isRTL ? theme.spacing.s : 0,
     color: theme.colors.onSurface,
+    // writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr', // Usually not needed if parent is already RTL
   },
   button: {
-    marginTop: theme.spacing.s, // Use theme spacing
-    // `backgroundColor` is handled by PaperButton mode="contained" using theme.colors.primary
-    // `borderRadius` is handled by theme.roundness via PaperButton
+    marginTop: theme.spacing.s,
   },
   buttonContent: {
-    paddingVertical: theme.spacing.s, // Use theme spacing for inner padding
+    paddingVertical: theme.spacing.s,
   },
-  // buttonLabel: { // This should now be handled globally by theme.fonts.labelLarge for PaperButton
-  //   fontSize: 16,
-  //   fontWeight: 'bold',
-  // },
   footer: {
-    marginTop: theme.spacing.l, // Use theme spacing
+    marginTop: theme.spacing.l,
     alignItems: 'center',
+  },
+  footerTextBase: { // Base style for footer text
+    color: theme.colors.onSurface,
+    // textAlign will be handled by writingDirection or system default for RTL
   },
   registerLink: {
     color: theme.colors.secondary,
-    fontWeight: 'bold', // Keep bold for emphasis if not covered by a specific theme font variant
-    // If you want a specific font from your theme for this link, apply it here:
-    // fontFamily: theme.fonts.labelMedium.fontFamily,
-    // fontWeight: theme.fonts.labelMedium.fontWeight,
+    fontWeight: 'bold',
   }
 });

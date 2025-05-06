@@ -1,7 +1,7 @@
 // src/screens/RegisterScreen.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Animated, Easing, ScrollView, StyleSheet } from 'react-native';
+import { View, Animated, Easing, ScrollView, StyleSheet, I18nManager } from 'react-native'; // Added I18nManager
 import {
   TextInput as PaperTextInput,
   Button as PaperButton,
@@ -22,7 +22,7 @@ import { AppTheme, useAppTheme } from '../styles/theme'; // Import useAppTheme
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
-  const theme = useAppTheme(); // Use your custom typed theme hook
+  const theme = useAppTheme();
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,75 +47,52 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  const newErrorsLocal: { [key: string]: string | null } = {}; // Renamed to avoid conflict
-
   const validateField = async (field: string, value: string): Promise<string | null> => {
-    // (Keep your existing validation logic from previous step)
-    // For brevity, I'm not repeating the full validation logic here.
-    // Ensure it uses newErrorsLocal to build up errors for a single validation pass.
-    // Example for one field:
-    if (field === 'email' && (!value || !/\S+@\S+\.\S+/.test(value))) return 'Please enter a valid email';
+    // Translated error messages
+    if (field === 'email' && (!value || !/\S+@\S+\.\S+/.test(value))) return 'אנא הזן אימייל תקין';
+    if (field === 'confirmEmail' && value.toLowerCase() !== email.toLowerCase()) return 'כתובות האימייל אינן תואמות';
     if (field === 'username') {
-        if (!value || value.length < 3) return 'Username must be at least 3 characters';
-        if (value.length > 20) return 'Username cannot exceed 20 characters';
-        if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores.';
-        
+        if (!value || value.length < 3) return 'שם משתמש חייב להכיל לפחות 3 תווים';
+        if (value.length > 20) return 'שם משתמש לא יכול לעלות על 20 תווים';
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'שם משתמש יכול להכיל רק אותיות באנגלית, מספרים וקו תחתון.';
         setUsernameLoading(true);
         try {
             const snap = await getDocs(query(collection(db, 'users'), where('username_lowercase', '==', value.toLowerCase())));
             setUsernameLoading(false);
-            return !snap.empty ? 'Username already taken' : null;
+            return !snap.empty ? 'שם המשתמש כבר תפוס' : null;
         } catch (e) {
             console.error("Username check failed:", e);
             setUsernameLoading(false);
-            return 'Error checking username. Please try again.';
+            return 'שגיאה בבדיקת שם המשתמש. אנא נסה שוב.';
         }
     }
-    // ... (rest of your validation cases)
+    if (field === 'firstName' && !value) return 'שם פרטי הוא שדה חובה';
+    if (field === 'lastName' && !value) return 'שם משפחה הוא שדה חובה';
+    if (field === 'password' && (!value || value.length < 6)) return 'סיסמה חייבת להכיל לפחות 6 תווים';
+    if (field === 'confirmPassword' && value !== password) return 'הסיסמאות אינן תואמות';
     return null;
   };
 
-
   const validateForm = async (): Promise<boolean> => {
     let isValid = true;
-    const fieldsToValidate = { firstName, lastName, username, email, confirmEmail, password, confirmPassword };
     const currentErrors: { [key: string]: string | null } = {};
-
-    if (!email || !/\S+@\S+\.\S+/.test(email)) { currentErrors.email = 'Please enter a valid email'; isValid = false; }
-    if (email.toLowerCase() !== confirmEmail.toLowerCase()) { currentErrors.confirmEmail = 'Emails do not match'; isValid = false; }
-    
-    // Username validation (including async check)
-    if (!username || username.length < 3) {
-        currentErrors.username = 'Username must be at least 3 characters'; isValid = false;
-    } else if (username.length > 20) {
-        currentErrors.username = 'Username cannot exceed 20 characters'; isValid = false;
-    } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        currentErrors.username = 'Username can only contain letters, numbers, and underscores.'; isValid = false;
-    } else {
-        setUsernameLoading(true);
-        try {
-            const snap = await getDocs(query(collection(db, 'users'), where('username_lowercase', '==', username.toLowerCase())));
-            if (!snap.empty) { currentErrors.username = 'Username already taken'; isValid = false; }
-        } catch (e) {
-            console.error("Username check failed:", e);
-            currentErrors.username = 'Error checking username'; isValid = false;
-        } finally {
-            setUsernameLoading(false);
+    const fields = { email, confirmEmail, password, confirmPassword, username, firstName, lastName };
+    for (const [key, value] of Object.entries(fields)) {
+        const error = await validateField(key, value as string); // Cast value to string
+        if (error) {
+            currentErrors[key] = error;
+            isValid = false;
+        } else {
+            currentErrors[key] = null; // Clear previous error if any
         }
     }
-
-    if (!firstName) { currentErrors.firstName = 'First name is required'; isValid = false; }
-    if (!lastName) { currentErrors.lastName = 'Last name is required'; isValid = false; }
-    if (!password || password.length < 6) { currentErrors.password = 'Password must be at least 6 characters'; isValid = false; }
-    if (password !== confirmPassword) { currentErrors.confirmPassword = 'Passwords do not match'; isValid = false; }
-    
     setErrors(currentErrors);
     return isValid;
   };
 
   const handleRegister = async () => {
     if (!(await validateForm())) {
-      Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please fix the errors highlighted below.' });
+      Toast.show({ type: 'error', text1: 'שגיאות באימות', text2: 'אנא תקן את השגיאות המודגשות.' });
       return;
     }
     setLoading(true);
@@ -123,52 +100,39 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user;
       await setDoc(doc(db, 'users', user.uid), {
-        id: user.uid,
-        email: email.toLowerCase().trim(),
-        username: username.trim(), // Store as entered, query with lowercase
-        username_lowercase: username.toLowerCase().trim(),
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        displayName: `${firstName.trim()} ${lastName.trim()}`,
-        profileComplete: false,
+        id: user.uid, email: email.toLowerCase().trim(), username: username.trim(),
+        username_lowercase: username.toLowerCase().trim(), firstName: firstName.trim(), lastName: lastName.trim(),
+        displayName: `${firstName.trim()} ${lastName.trim()}`, profileComplete: false,
         liked_jobs: [], matched_jobs: [], disliked_jobs: {},
         createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
       });
-      Toast.show({ type: 'success', text1: 'Account Created! 🎉', text2: 'Please login to continue.' });
+      Toast.show({ type: 'success', text1: 'החשבון נוצר! 🎉', text2: 'אנא התחבר כדי להמשיך.' });
       navigation.replace('Login');
     } catch (err: any) {
       console.error("Registration Error:", err.code, err.message);
-      let message = 'An unknown error occurred.';
+      let message = 'אירעה שגיאה ביצירת החשבון.';
       if (err.code === 'auth/email-already-in-use') {
-        message = 'This email is already registered.';
+        message = 'כתובת אימייל זו כבר רשומה.';
         setErrors(prev => ({ ...prev, email: message }));
       } else if (err.code === 'auth/weak-password') {
-        message = 'The password is too weak.';
+        message = 'הסיסמה חלשה מדי.';
         setErrors(prev => ({ ...prev, password: message }));
       } else {
-        message = `Registration failed: ${err.message || err.code}`;
+        message = `ההרשמה נכשלה: ${err.message || err.code}`;
       }
-      Toast.show({ type: 'error', text1: 'Registration Failed', text2: message });
+      Toast.show({ type: 'error', text1: 'ההרשמה נכשלה', text2: message });
     } finally {
       setLoading(false);
     }
   };
   
-  // Generate styles using the theme
   const styles = makeStyles(theme);
 
   const renderInput = (
-    label: string,
-    value: string,
-    setter: (text: string) => void,
-    fieldKey: keyof typeof errors,
-    options: {
-      secure?: boolean;
-      keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-      autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
-      isConfirmPassword?: boolean;
-      maxLength?: number;
-    } = {}
+    label: string, value: string, setter: (text: string) => void, fieldKey: keyof typeof errors,
+    options: { secure?: boolean; keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+               autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+               isConfirmPassword?: boolean; maxLength?: number; } = {}
   ) => {
     const { secure = false, keyboardType = 'default', autoCapitalize = 'words', isConfirmPassword = false, maxLength } = options;
     const currentShowPassword = isConfirmPassword ? showConfirmPassword : showPassword;
@@ -177,33 +141,19 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     return (
       <View style={styles.inputContainer}>
         <PaperTextInput
-          label={label}
-          value={value}
-          onChangeText={setter}
-          onBlur={async () => { // Validate on blur
-             const error = await validateField(fieldKey as string, value); // Use the more granular validateField
-             setErrors(prev => ({ ...prev, [fieldKey]: error }));
-          }}
-          mode="outlined"
-          style={styles.input} // General input style (e.g. no margin if container handles it)
+          label={label} value={value} onChangeText={setter}
+          onBlur={async () => { const error = await validateField(fieldKey as string, value); setErrors(prev => ({ ...prev, [fieldKey]: error })); }}
+          mode="outlined" style={styles.input} 
           secureTextEntry={secure && !currentShowPassword}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          error={!!errors[fieldKey]}
-          maxLength={maxLength}
-          theme={{ roundness: theme.roundness }}
+          keyboardType={keyboardType} autoCapitalize={autoCapitalize} error={!!errors[fieldKey]}
+          maxLength={maxLength} theme={{ roundness: theme.roundness }}
           right={
-            secure ? (
-              <PaperTextInput.Icon
-                icon={currentShowPassword ? "eye-off" : "eye"}
-                onPress={() => currentSetShowPassword(!currentShowPassword)}
-                color={theme.colors.onSurfaceVariant}
-              />
-            ) : fieldKey === 'username' && usernameLoading ? (
-                <PaperActivityIndicator animating={true} color={theme.colors.primary} style={styles.usernameLoader}/>
-            ) : undefined
+            secure ? (<PaperTextInput.Icon icon={currentShowPassword ? "eye-off" : "eye"} onPress={() => currentSetShowPassword(!currentShowPassword)} color={theme.colors.onSurfaceVariant} />)
+            : fieldKey === 'username' && usernameLoading ? (<PaperActivityIndicator animating={true} color={theme.colors.primary} style={styles.usernameLoader}/>)
+            : undefined
           }
         />
+        {/* HelperText should align right by default in RTL */}
         {errors[fieldKey] && <HelperText type="error" visible={!!errors[fieldKey]} style={styles.helperText}>{errors[fieldKey]}</HelperText>}
       </View>
     );
@@ -217,50 +167,46 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     >
       <View style={styles.header}>
         <PaperText variant="headlineLarge" style={styles.headerText}>
-          Create Account
+          צור חשבון
         </PaperText>
         <PaperText variant="bodyMedium" style={styles.subHeaderText}>
-          Join the fun, find your match 🎯
+          פלואו ג'וב, מה שזורם לך.
         </PaperText>
       </View>
 
       <View style={styles.form}>
-        {renderInput('First Name', firstName, setFirstName, 'firstName', { autoCapitalize: 'words', maxLength: 50 })}
-        {renderInput('Last Name', lastName, setLastName, 'lastName', { autoCapitalize: 'words', maxLength: 50 })}
-        {renderInput('Username', username, (text) => setUsername(text.replace(/\s/g, '')), 'username', { autoCapitalize: 'none', maxLength: 20 })}
-        {renderInput('Email', email, (text) => setEmail(text.replace(/\s/g, '')), 'email', { keyboardType: 'email-address', autoCapitalize: 'none' })}
-        {renderInput('Confirm Email', confirmEmail, (text) => setConfirmEmail(text.replace(/\s/g, '')), 'confirmEmail', { keyboardType: 'email-address', autoCapitalize: 'none' })}
-        {renderInput('Password', password, setPassword, 'password', { secure: true, autoCapitalize: 'none' })}
-        {renderInput('Confirm Password', confirmPassword, setConfirmPassword, 'confirmPassword', { secure: true, autoCapitalize: 'none', isConfirmPassword: true })}
+        {renderInput('שם פרטי', firstName, setFirstName, 'firstName', { autoCapitalize: 'words', maxLength: 50 })}
+        {renderInput('שם משפחה', lastName, setLastName, 'lastName', { autoCapitalize: 'words', maxLength: 50 })}
+        {renderInput('שם משתמש', username, (text) => setUsername(text.replace(/\s/g, '')), 'username', { autoCapitalize: 'none', maxLength: 20 })}
+        {renderInput('אימייל', email, (text) => setEmail(text.replace(/\s/g, '')), 'email', { keyboardType: 'email-address', autoCapitalize: 'none' })}
+        {renderInput('אימייל שוב', confirmEmail, (text) => setConfirmEmail(text.replace(/\s/g, '')), 'confirmEmail', { keyboardType: 'email-address', autoCapitalize: 'none' })}
+        {renderInput('סיסמה', password, setPassword, 'password', { secure: true, autoCapitalize: 'none' })}
+        {renderInput('סיסמה שוב', confirmPassword, setConfirmPassword, 'confirmPassword', { secure: true, autoCapitalize: 'none', isConfirmPassword: true })}
 
         <View style={styles.optionsRow}>
           <View style={styles.switchContainer}>
             <PaperSwitch value={rememberMe} onValueChange={setRememberMe} color={theme.colors.primary} />
-            <PaperText variant='bodyMedium' style={styles.rememberMeText}>Remember Me</PaperText>
+            <PaperText variant='bodyMedium' style={styles.rememberMeText}>זכור אותי</PaperText>
           </View>
         </View>
 
         <PaperButton
-          mode="contained"
-          onPress={handleRegister}
-          loading={loading || usernameLoading} // Consider both loading states
-          disabled={loading || usernameLoading}
-          style={styles.button}
-          contentStyle={styles.buttonContent} // For inner padding
-          // labelStyle={styles.buttonLabel} // Should be handled by theme.fonts.labelLarge
+          mode="contained" onPress={handleRegister} loading={loading || usernameLoading}
+          disabled={loading || usernameLoading} style={styles.button} contentStyle={styles.buttonContent}
         >
-          Register
+          הרשמה
         </PaperButton>
       </View>
 
       <View style={styles.footer}>
-        <PaperText variant='bodyMedium' style={{ color: theme.colors.onSurface }}>
-          Already have an account?{' '}
+         {/* Added writingDirection: 'rtl' for robust mixed content rendering */}
+        <PaperText variant='bodyMedium' style={[styles.footerTextBase, { writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
+          יש לך כבר חשבון?{' '}
           <PaperText
             onPress={() => !loading && navigation.navigate('Login')}
             style={styles.loginLink}
           >
-            Login
+            כניסה
           </PaperText>
         </PaperText>
       </View>
@@ -268,77 +214,37 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   );
 }
 
-// Function to generate styles based on the theme
 const makeStyles = (theme: AppTheme) => StyleSheet.create({
-  animatedScroll: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
-  container: {
-    flexGrow: 1,
-    paddingHorizontal: theme.spacing.l, // Use theme spacing
-    paddingVertical: theme.spacing.xl,   // Use theme spacing
-    justifyContent: 'center',
-  },
-  header: {
-    marginBottom: theme.spacing.l, // Use theme spacing
-    alignItems: 'center',
-  },
-  headerText: {
-    color: theme.colors.primary,
-    textAlign: 'center',
-  },
-  subHeaderText: {
-    color: theme.colors.onSurface,
-    textAlign: 'center',
-    marginTop: theme.spacing.s,
-  },
-  form: {
-    width: '100%',
-  },
-  inputContainer: { // Groups TextInput and HelperText
-    marginBottom: theme.spacing.m, // Spacing between each input group
-  },
+  animatedScroll: { flex: 1, backgroundColor: theme.colors.background },
+  container: { flexGrow: 1, paddingHorizontal: theme.spacing.l, paddingVertical: theme.spacing.xl, justifyContent: 'center' },
+  header: { marginBottom: theme.spacing.l, alignItems: 'center' },
+  headerText: { color: theme.colors.primary, textAlign: 'center' },
+  subHeaderText: { color: theme.colors.onSurface, textAlign: 'center', marginTop: theme.spacing.s },
+  form: { width: '100%' },
+  inputContainer: { marginBottom: theme.spacing.m },
   input: {
-    // backgroundColor: 'transparent', // Default for outlined
-    // No margin here, inputContainer handles it
+    // Explicitly set textAlign for TextInput if global RTL doesn't suffice
+    // or if PaperTextInput doesn't automatically align placeholder/text to right in RTL.
+    textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   helperText: {
-    // Default Paper styling is usually fine. Add custom if needed.
+    // HelperText should align right by default in RTL.
+    // If not, add: textAlign: I18nManager.isRTL ? 'right' : 'left',
+    // writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr',
   },
-  usernameLoader: {
-    marginRight: theme.spacing.m, // Ensure loader inside TextInput isn't cramped
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: theme.spacing.m, // Use theme spacing
-    minHeight: 40,
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  usernameLoader: { marginRight: theme.spacing.m }, // This will be on the left in RTL if input text is on the right
+  optionsRow: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.m, minHeight: 40 }, // Reversed in RTL
+  switchContainer: { flexDirection: 'row', alignItems: 'center' }, // Items reversed in RTL
   rememberMeText: {
-    marginLeft: theme.spacing.s,
+    marginRight: I18nManager.isRTL ? theme.spacing.s : 0, // Space between text (now on right) and switch (now on left)
+    marginLeft: !I18nManager.isRTL ? theme.spacing.s : 0,
     color: theme.colors.onSurface,
   },
-  button: {
-    marginTop: theme.spacing.m, // Use theme spacing
+  button: { marginTop: theme.spacing.m },
+  buttonContent: { paddingVertical: theme.spacing.s },
+  footer: { marginTop: theme.spacing.l, alignItems: 'center' },
+  footerTextBase: { // Base style for footer text
+    color: theme.colors.onSurface,
   },
-  buttonContent: {
-    paddingVertical: theme.spacing.s, // Use theme spacing for inner padding
-  },
-  // buttonLabel: { // Should be handled by theme.fonts.labelLarge
-  //   fontSize: 16,
-  //   fontWeight: 'bold',
-  // },
-  footer: {
-    marginTop: theme.spacing.l, // Use theme spacing
-    alignItems: 'center',
-  },
-  loginLink: {
-    color: theme.colors.secondary,
-    fontWeight: 'bold',
-  }
+  loginLink: { color: theme.colors.secondary, fontWeight: 'bold' }
 });
