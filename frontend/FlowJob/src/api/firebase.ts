@@ -1,45 +1,33 @@
-// src/api/firebase.ts
-
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore'; // Notice Firestore type
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 
-// Import variables from .env using the names defined in your env.d.ts
-import {
-    REACT_APP_FIREBASE_API_KEY,
-    REACT_APP_FIREBASE_AUTH_DOMAIN,
-    REACT_APP_FIREBASE_PROJECT_ID,
-    REACT_APP_FIREBASE_STORAGE_BUCKET,
-    REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    REACT_APP_FIREBASE_APP_ID,
-    REACT_APP_FIREBASE_MEASUREMENT_ID
-    // Maps_API_KEY // Import this if needed elsewhere
-} from '@env';
-
-// Use the imported variables with REACT_APP_ prefix
+// Load environment variables
 const firebaseConfig = {
-  apiKey: REACT_APP_FIREBASE_API_KEY,
-  authDomain: REACT_APP_FIREBASE_AUTH_DOMAIN,
-  projectId: REACT_APP_FIREBASE_PROJECT_ID,
-  storageBucket: REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: REACT_APP_FIREBASE_APP_ID,
-  measurementId: REACT_APP_FIREBASE_MEASUREMENT_ID // Optional
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-// Initialize Firebase App (handles hot reloading correctly)
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firebase services
-const auth = getAuth(app);
-const storage = getStorage(app);
-const db = getFirestore(app); // Simplified Firestore initialization
+// ✅ Correct way to type Firestore
+let db: Firestore;
 
-// Export the initialized services and config
-export { app, auth, db, storage, firebaseConfig };
-
-// Optional runtime check (useful during development)
-if (!REACT_APP_FIREBASE_API_KEY || !REACT_APP_FIREBASE_AUTH_DOMAIN || !REACT_APP_FIREBASE_PROJECT_ID || !REACT_APP_FIREBASE_APP_ID) {
-    console.error("🔥🔥 FATAL ERROR: Missing Firebase configuration in .env file (expected REACT_APP_... variables)! 🔥🔥");
+if (getApps().length > 0) {
+  db = getFirestore(app); // Reuse
+} else {
+  db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  }); // Init only first time
 }
+
+export const auth = getAuth(app);
+export const storage = getStorage(app);
+export { db, firebaseConfig };
