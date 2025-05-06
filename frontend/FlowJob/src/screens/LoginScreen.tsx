@@ -1,140 +1,108 @@
 // src/screens/LoginScreen.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Animated, Easing, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Animated, Easing, ScrollView, StyleSheet } from 'react-native';
 import {
   TextInput as PaperTextInput,
   Button as PaperButton,
   Text as PaperText,
   Switch as PaperSwitch,
   ActivityIndicator as PaperActivityIndicator,
-  useTheme // Import useTheme hook
 } from 'react-native-paper';
-import { Feather } from '@expo/vector-icons'; // Keep Feather if needed specifically, or use Paper's TextInput.Icon
 import Toast from 'react-native-toast-message';
-import { NativeStackScreenProps } from '@react-navigation/native-stack'; // For navigation prop types
+import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-// --- Firebase ---
-// Ensure this path is correct and firebase.ts exports initialized auth
 import { auth } from '../api/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-
-// --- Navigation Types ---
-// Assuming you have this defined in your navigation setup
 import { AuthStackParamList } from '../navigation/AuthNavigator'; // Adjust path if needed
-type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
+import { AppTheme, useAppTheme } from '../styles/theme'; // Import useAppTheme
 
-// --- Placeholder Function ---
-// Replace this with your actual logic if needed (e.g., checking Firestore)
+// Placeholder Function
 const ensureUserProfileExists = async () => {
   console.log("Placeholder: Ensuring user profile exists...");
-  // Example: const user = auth.currentUser; if (user) { /* check/create firestore doc */ }
   return Promise.resolve();
 };
 
+// Define LoginScreenProps using NativeStackScreenProps if not already defined
+type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
-  const theme = useTheme(); // Get the theme object
+  const theme = useAppTheme(); // Use your custom typed theme hook
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true); // Add logic if needed
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // --- Animations (kept from original) ---
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        easing: Easing.out(Easing.exp),
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, easing: Easing.out(Easing.exp), useNativeDriver: true }),
     ]).start();
   }, [fadeAnim, slideAnim]);
 
-  // --- Handlers ---
   const handleLogin = async () => {
     if (!email || !password) {
-        Toast.show({ type: 'error', text1: 'Missing fields', text2: 'Please enter both email and password.' });
-        return;
+      Toast.show({ type: 'error', text1: 'Missing fields', text2: 'Please enter both email and password.' });
+      return;
     }
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      await ensureUserProfileExists(); // Call placeholder/real function
-      // Toast is shown implicitly by RootNavigator's auth state change handling
-      // You might remove explicit success toast here if RootNavigator handles it
-      // Toast.show({ type: 'success', text1: 'Welcome back 👋' });
-      // Navigation to App stack happens automatically via RootNavigator's state change
+      await ensureUserProfileExists();
+      Toast.show({ type: 'success', text1: 'Login Successful!', text2: 'Welcome back 👋' });
+      navigation.replace('Home'); // Adjust 'Home' as needed
     } catch (error: any) {
-      console.error("Login Error:", error); // Log detailed error
-      // Provide user-friendly messages
+      console.error("Login Error:", error.code, error.message);
       let message = 'An unknown error occurred.';
       if (error.code) {
         switch (error.code) {
-          case 'auth/invalid-email':
-            message = 'Please enter a valid email address.';
-            break;
+          case 'auth/invalid-email': message = 'Please enter a valid email address.'; break;
           case 'auth/user-not-found':
-          case 'auth/wrong-password': // Combine these for security
-          case 'auth/invalid-credential':
-            message = 'Invalid email or password.';
-            break;
-          case 'auth/too-many-requests':
-             message = 'Too many attempts. Please try again later.';
-             break;
-          default:
-            message = 'Login failed. Please try again.';
+          case 'auth/wrong-password':
+          case 'auth/invalid-credential': message = 'Invalid email or password.'; break;
+          case 'auth/too-many-requests': message = 'Too many attempts. Please try again later or reset your password.'; break;
+          case 'auth/user-disabled': message = 'This account has been disabled.'; break;
+          default: message = `Login failed: ${error.message || 'Please try again.'}`;
         }
       }
-      Toast.show({ type: 'error', text1: 'Login failed', text2: message });
+      Toast.show({ type: 'error', text1: 'Login Failed', text2: message });
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Render ---
+  // Generate styles using the theme
+  const styles = makeStyles(theme);
+
   return (
     <Animated.ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: theme.colors.background, // Use theme color
-        opacity: fadeAnim,
-        transform: [{ translateY: slideAnim }],
-      }}
+      style={[styles.animatedScroll, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
       contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled" // Dismiss keyboard on tap outside inputs
+      keyboardShouldPersistTaps="handled"
     >
-      {/* Header */}
       <View style={styles.header}>
-        <PaperText variant="headlineLarge" style={{ color: theme.colors.primary, textAlign: 'center' }}>
+        <PaperText variant="headlineLarge" style={styles.headerText}>
           Welcome Back
         </PaperText>
-        <PaperText variant="bodyMedium" style={{ color: theme.colors.onSurface, textAlign: 'center', marginTop: 8 }}>
+        <PaperText variant="bodyMedium" style={styles.subHeaderText}>
           Let's continue your journey 🚀
         </PaperText>
       </View>
 
-      {/* Form */}
       <View style={styles.form}>
         <PaperTextInput
           label="Email"
           value={email}
           onChangeText={setEmail}
-          mode="outlined" // Or "flat"
+          mode="outlined"
           style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
-          theme={{ roundness: theme.roundness }} // Apply theme roundness
+          theme={{ roundness: theme.roundness }} // Paper components pick up roundness from theme
         />
         <PaperTextInput
           label="Password"
@@ -147,98 +115,120 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             <PaperTextInput.Icon
               icon={showPassword ? "eye-off" : "eye"}
               onPress={() => setShowPassword(!showPassword)}
-              color={theme.colors.onSurface} // Use theme color for icon
+              color={theme.colors.onSurfaceVariant} // Using a more specific theme color
             />
           }
           theme={{ roundness: theme.roundness }}
         />
 
-        {/* Remember Me & Loading */}
         <View style={styles.optionsRow}>
           <View style={styles.switchContainer}>
             <PaperSwitch
               value={rememberMe}
               onValueChange={setRememberMe}
-              color={theme.colors.primary} // Use theme color
-              // trackColor doesn't work reliably across Paper versions/platforms, color prop is preferred
+              color={theme.colors.primary}
             />
-            <PaperText variant='bodyMedium' style={{ marginLeft: 8, color: theme.colors.onSurface }}>Remember Me</PaperText>
+            <PaperText variant='bodyMedium' style={styles.rememberMeText}>Remember Me</PaperText>
           </View>
           {loading && <PaperActivityIndicator animating={true} color={theme.colors.primary} size='small' />}
         </View>
 
-        {/* Login Button */}
         <PaperButton
-          mode="contained" // Or "outlined", "text"
+          mode="contained"
           onPress={handleLogin}
           loading={loading}
           disabled={loading}
           style={styles.button}
-          labelStyle={styles.buttonLabel} // Style for text inside button
-          // buttonColor={theme.colors.primary} // Explicitly set button color if needed
-          // textColor={theme.colors.onPrimary} // Explicitly set text color if needed
+          contentStyle={styles.buttonContent} // For inner padding
+          // labelStyle={styles.buttonLabel} // Should be handled by theme.fonts.labelLarge
         >
           Login
         </PaperButton>
       </View>
 
-      {/* Register Link */}
       <View style={styles.footer}>
         <PaperText variant='bodyMedium' style={{ color: theme.colors.onSurface }}>
           New here?{' '}
           <PaperText
-            onPress={() => !loading && navigation.navigate('Register')} // Prevent navigation while loading
-            style={{ color: theme.colors.secondary, fontWeight: 'bold' }} // Use theme secondary
+            onPress={() => !loading && navigation.navigate('Register')}
+            style={styles.registerLink}
           >
             Register
           </PaperText>
         </PaperText>
       </View>
-
     </Animated.ScrollView>
   );
 }
 
-// --- Styles ---
-// Using StyleSheet for structure and spacing, theme for colors/fonts
-const styles = StyleSheet.create({
+// Function to generate styles based on the theme
+const makeStyles = (theme: AppTheme) => StyleSheet.create({
+  animatedScroll: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
   container: {
-    flexGrow: 1, // Needed for ScrollView content to fill screen potentially
-    padding: 24, // Example spacing
-    justifyContent: 'center', // Center content vertically
+    flexGrow: 1,
+    padding: theme.spacing.l, // Use theme spacing
+    justifyContent: 'center',
   },
   header: {
-    marginBottom: 32, // Example spacing
+    marginBottom: theme.spacing.xl, // Use theme spacing
     alignItems: 'center',
+  },
+  headerText: {
+    color: theme.colors.primary, // Directly use theme color
+    textAlign: 'center',
+    // Font variant handles font family, size, weight from theme.fonts
+  },
+  subHeaderText: {
+    color: theme.colors.onSurface, // Directly use theme color
+    textAlign: 'center',
+    marginTop: theme.spacing.s, // Use theme spacing
   },
   form: {
     width: '100%',
   },
   input: {
-    marginBottom: 16, // Example spacing
-    backgroundColor: 'transparent', // Use outlined input's background
+    marginBottom: theme.spacing.m, // Use theme spacing
+    // backgroundColor: 'transparent', // Default for outlined PaperTextInput
   },
   optionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16, // Example spacing
-    minHeight: 40, // Ensure row has height for ActivityIndicator alignment
+    marginBottom: theme.spacing.m, // Use theme spacing
+    minHeight: 40,
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  rememberMeText: {
+    marginLeft: theme.spacing.s, // Use theme spacing
+    color: theme.colors.onSurface,
+  },
   button: {
-    marginTop: 8, // Example spacing
-    paddingVertical: 8, // Add padding inside button
+    marginTop: theme.spacing.s, // Use theme spacing
+    // `backgroundColor` is handled by PaperButton mode="contained" using theme.colors.primary
+    // `borderRadius` is handled by theme.roundness via PaperButton
   },
-  buttonLabel: {
-    fontSize: 16, // Example size
-    fontWeight: 'bold',
+  buttonContent: {
+    paddingVertical: theme.spacing.s, // Use theme spacing for inner padding
   },
+  // buttonLabel: { // This should now be handled globally by theme.fonts.labelLarge for PaperButton
+  //   fontSize: 16,
+  //   fontWeight: 'bold',
+  // },
   footer: {
-    marginTop: 24, // Example spacing
+    marginTop: theme.spacing.l, // Use theme spacing
     alignItems: 'center',
+  },
+  registerLink: {
+    color: theme.colors.secondary,
+    fontWeight: 'bold', // Keep bold for emphasis if not covered by a specific theme font variant
+    // If you want a specific font from your theme for this link, apply it here:
+    // fontFamily: theme.fonts.labelMedium.fontFamily,
+    // fontWeight: theme.fonts.labelMedium.fontWeight,
   }
 });

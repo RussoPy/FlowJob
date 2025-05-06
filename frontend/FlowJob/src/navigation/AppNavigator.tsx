@@ -13,7 +13,6 @@ const AppNavigator = () => {
   return (
     <Stack.Navigator>
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'FlowJob' }}/>
-      {/* Add other screens like Profile, Matches etc. */}
     </Stack.Navigator>
   );
 };
