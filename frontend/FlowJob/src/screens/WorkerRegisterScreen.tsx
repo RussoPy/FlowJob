@@ -16,7 +16,6 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { auth, db } from '../api/firebase'; //
 import { createUserWithEmailAndPassword } from 'firebase/auth'; //
 import { doc, setDoc, getDocs, query, collection, where, serverTimestamp } from 'firebase/firestore'; //
-
 import { AuthStackParamList } from '../navigation/AuthNavigator';
 import { AppTheme, useAppTheme } from '../styles/theme'; //
 import { Worker } from '../models/workerModel'; // Import Worker interface
@@ -137,7 +136,6 @@ export default function WorkerRegisterScreen({ navigation }: WorkerRegisterScree
       });
 
       Toast.show({ type: 'success', text1: 'החשבון נוצר! 🎉', text2: 'אנא התחבר כדי להמשיך.' });
-      navigation.replace('Login');
     } catch (err: any) {
       console.error("Registration Error:", err.code, err.message);
       let message = 'אירעה שגיאה ביצירת החשבון.';

@@ -148,7 +148,6 @@ export default function BusinessRegisterScreen({ navigation }: BusinessRegisterS
       });
 
       Toast.show({ type: 'success', text1: 'החשבון נוצר! 🎉', text2: 'אנא התחבר כדי להמשיך.' });
-      navigation.replace('Login');
     } catch (err: any) {
       console.error("Registration Error:", err.code, err.message);
       let message = 'אירעה שגיאה ביצירת החשבון.';
