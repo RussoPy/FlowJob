@@ -1,16 +1,17 @@
 // src/screens/RoleScreen.tsx
+
 import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { Button as PaperButton, Text as PaperText } from 'react-native-paper';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { AuthStackParamList } from '../navigation/AuthNavigator';
-import { AppTheme, useAppTheme } from '../styles/theme';
+import { AppTheme, useAppTheme } from '../styles/theme'; //
 
 type RoleScreenProps = NativeStackScreenProps<AuthStackParamList, 'RoleScreen'>;
 
 const RoleScreen = ({ navigation }: RoleScreenProps) => {
-    const theme = useAppTheme();
+    const theme = useAppTheme(); //
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
 
@@ -22,7 +23,11 @@ const RoleScreen = ({ navigation }: RoleScreenProps) => {
     }, [fadeAnim, slideAnim]);
 
     const handleRoleSelection = (role: 'worker' | 'business') => {
-        navigation.navigate('Register', { role }); // Pass role as a parameter
+        if (role === 'worker') {
+            navigation.navigate('WorkerRegister'); // Navigate to WorkerRegisterScreen
+        } else if (role === 'business') {
+            navigation.navigate('BusinessRegister'); // Navigate to BusinessRegisterScreen
+        }
     };
 
     const styles = makeStyles(theme);
