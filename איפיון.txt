@@ -1,0 +1,152 @@
+איפיון
+
+
+טינדר למציאת עבודות
+
+יוזר:
+
+עסק ועובד:
+
+
+עובד:
+
+export interface Worker {
+    // --- Core Identification & Personal Info ---
+    id: string;                      // Corresponds to Firebase Auth UID
+    email: string;                   // User's email (likely from Auth)
+    firstName: string;
+    lastName: string;
+    phone: string;          // verify // register
+    birth_date: any;                 // Firestore Timestamp or string (to calculate age if needed) 13 and above only
+    profilePictureUrl?: string;      // URL for profile picture
+  
+    // --- Professional Profile ---
+    headline?: string;               // Short professional headline (e.g., "Software Engineer | React Developer")
+    summary?: string;                // Longer professional summary/bio
+    skills: string[];                // List of skills (Matches Job's skills_needed)
+    preferred_tags: string[];        // Job roles or types the worker is interested in (Matches Job's tags)
+    industry_preference?: string;    // Preferred industry (Matches Job's industry)
+    resumeUrl?: string;              // Optional link to a resume PDF/doc
+    portfolioUrl?: string;           // Optional link to a portfolio website
+    education?:string;                // Optional 
+  
+    // --- Job Preferences ---
+    location_lat?: number;           // Worker's current or preferred base latitude
+    location_lng?: number;           // Worker's current or preferred base longitude
+    job_search_radius: number;       // Maximum distance (in km or miles) they are willing to commute/relocate
+    salary_min: number;              // Minimum desired salary (Matches Job's salary range)
+    salary_max: number;              // Maximum desired salary (Matches Job's salary range)
+    salary_unit?: string;      // e.g.,per hour/month (Defaults might be set elsewhere)
+    availability: string;            // e.g., "Full-time", "Part-time", "Contract", "Internship" (Matches Job's availability)
+    willing_to_relocate?: boolean;   // Whether the worker is open to relocating
+  
+    // --- Application State & Matching ---
+    liked_jobs: string[];            // Array of Job IDs the worker has swiped right on / liked
+    matched_jobs: string[];          // Array of Job IDs where both worker and business liked each other
+    disliked_jobs: { [jobId: string]: boolean }; // Map of Job IDs the worker has swiped left on / rejected (key: jobId, value: true)
+  
+    // --- System Information ---
+    profileComplete: boolean;        // Flag indicating if the profile setup is finished
+    created_at: any;                 // Firestore Timestamp or string
+    last_updated_at?: any;           // Firestore Timestamp or string
+  }
+
+
+עסק:
+
+// models/BusinessModel.ts
+
+import { Timestamp } from 'firebase/firestore'; // Import Firestore Timestamp type
+import { Job } from './JobModel'; // Import the Job model
+
+export interface Business {
+    // --- Core Business Identification ---
+    businessId: string;         // Unique identifier for the business
+    name: string;               // Official name of the business
+    industry: string;           // Primary industry (e.g., "Technology", "Retail", "Hospitality")
+
+    // --- Business Description ---
+    header: string;             // Short tagline or headline describing the business
+    summary: string;            // Detailed description of the business, its mission, culture, etc.
+    websiteUrl?: string;        // Optional URL for the business's website
+    logoUrl?: string;           // URL for the business's logo
+    businessImageUrls?: string[];// Optional URLs for images showcasing the business (office, team, products)
+
+    // --- Location ---
+    location_address: string;   // Primary physical address or main operational area
+    location_lat?: number;      // Latitude of the primary location
+    location_lng?: number;      // Longitude of the primary location
+    // Consider adding an array for multiple locations if needed:
+    // additionalLocations?: { address: string; lat?: number; lng?: number; }[];
+
+    // --- Contact & Admin ---
+    contactEmail?: string;      // General contact email for the business
+    contactPhone?: string;      // General contact phone number
+    associatedUserIds?: string[];// IDs of users authorized to manage this business profile
+
+    // --- Additional Business Details (Optional but useful) ---
+    size?: string;              // Estimated company size (e.g., "1-10 employees", "50-200 employees")
+    foundedYear?: number;       // Year the business was founded
+
+    // --- Embedded Job Postings ---
+    // This embeds the full job details within the business document.
+    // Be mindful of Firestore document size limits (1 MiB) if a business
+    // has a very large number of job postings.
+    // An alternative is to store only jobIds: string[] here and fetch jobs separately.
+    jobs: Job[];
+
+    // --- System Information ---
+    createdAt: Timestamp;       // Firestore Timestamp for when the business profile was created
+    updatedAt?: Timestamp;      // Firestore Timestamp for the last update to the business profile
+}
+
+
+// models/JobModel.ts
+
+import { Timestamp } from 'firebase/firestore'; // Import Firestore Timestamp type
+
+export interface Job {
+    // --- Core Job Identification ---
+    jobId: string;              // Unique identifier for this specific job posting
+    businessId: string;         // Foreign key linking back to the Business (important for queries)
+
+    // --- Job Details ---
+    title: string;              // Job title (e.g., "Software Engineer", "Barista", "Marketing Manager")
+    description: string;        // Detailed description of the role, responsibilities, and expectations
+    tags?: string[];            // Keywords relevant to the job (e.g., "customer service", "java", "sales")
+    experience_required?: string;// Required level of experience (e.g., "Entry-level", "2+ years", "Senior")
+    skills_needed?: string[];   // Specific skills required (e.g., "JavaScript", "POS Systems", "SEO")
+    availability: string;       // Employment type (e.g., "Full-time", "Part-time", "Contract", "Internship")
+
+    // --- Job Location ---
+    // Can differ from the main business location (e.g., specific branch, or remote)
+    location_address?: string;  // Displayable location for *this job* (e.g., "Downtown Branch" or "Remote (Global)")
+    location_lat?: number;      // Latitude for the job location (if applicable)
+    location_lng?: number;      // Longitude for the job location (if applicable)
+    is_remote: boolean;         // Flag indicating if the job is fully remote
+
+    // --- Compensation & Benefits ---
+    salary_min?: number;        // Optional minimum salary (numeric value)
+    salary_max?: number;        // Optional maximum salary (numeric value)
+    salary_unit?: string;     // e.g.,per hour/month (Defaults might be set elsewhere)
+    benefits?: string[];        // List of key benefits offered for this role
+
+    // --- Requirements ---
+    minimum_age?: number;       // Optional minimum age requirement for this specific job (above 13 minimun)
+
+    // --- Job Specific Media ---
+    jobImageUrls?: string[];    // Optional images specific to this job posting (e.g., team photo, project example)
+
+    // --- Application Tracking & Status ---
+    is_active: boolean;         // Is the job posting currently active and accepting applications?
+    applicants: string[];       // Array of Worker IDs who have applied/swiped right
+    matches: string[];          // Array of Worker IDs where both business and worker showed interest
+    rejected: { [workerId: string]: Timestamp }; // Map of Worker IDs rejected by the business, potentially storing *when* they were rejected
+
+    // --- System Information ---
+    createdAt: Timestamp;       // Firestore Timestamp for when the job was posted
+    updatedAt?: Timestamp;      // Firestore Timestamp for the last update to the job posting
+    postedByUserId: string;     // ID of the user within the business who posted/manages this job
+    expiryDate?: Timestamp;     // Optional: Date when the job posting automatically becomes inactive
+}
+

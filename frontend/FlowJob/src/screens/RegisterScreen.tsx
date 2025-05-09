@@ -1,7 +1,8 @@
 // src/screens/RegisterScreen.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Animated, Easing, ScrollView, StyleSheet, I18nManager } from 'react-native'; // Added I18nManager
+import { View, Animated, Easing, ScrollView, StyleSheet, I18nManager } from 'react-native';
+import { useRoute } from '@react-navigation/native'; // Import useRoute
 import {
   TextInput as PaperTextInput,
   Button as PaperButton,
@@ -16,13 +17,16 @@ import { auth, db } from '../api/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDocs, query, collection, where, serverTimestamp } from 'firebase/firestore';
 
-import { AuthStackParamList } from '../navigation/AuthNavigator'; // Adjust path
-import { AppTheme, useAppTheme } from '../styles/theme'; // Import useAppTheme
+import { AuthStackParamList } from '../navigation/AuthNavigator';
+import { AppTheme, useAppTheme } from '../styles/theme';
 
 type RegisterScreenProps = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const theme = useAppTheme();
+  const route = useRoute<RegisterScreenProps['route']>(); // Get the route object
+  const { role } = route.params || {}; // Extract role parameter
+
   const [email, setEmail] = useState('');
   const [confirmEmail, setConfirmEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,7 +52,6 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   }, [fadeAnim, slideAnim]);
 
   const validateField = async (field: string, value: string): Promise<string | null> => {
-    // Translated error messages
     if (field === 'email' && (!value || !/\S+@\S+\.\S+/.test(value))) return 'אנא הזן אימייל תקין';
     if (field === 'confirmEmail' && value.toLowerCase() !== email.toLowerCase()) return 'כתובות האימייל אינן תואמות';
     if (field === 'username') {
@@ -78,12 +81,12 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
     const currentErrors: { [key: string]: string | null } = {};
     const fields = { email, confirmEmail, password, confirmPassword, username, firstName, lastName };
     for (const [key, value] of Object.entries(fields)) {
-        const error = await validateField(key, value as string); // Cast value to string
+        const error = await validateField(key, value as string);
         if (error) {
             currentErrors[key] = error;
             isValid = false;
         } else {
-            currentErrors[key] = null; // Clear previous error if any
+            currentErrors[key] = null;
         }
     }
     setErrors(currentErrors);
@@ -100,14 +103,23 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       const user = cred.user;
       await setDoc(doc(db, 'users', user.uid), {
-        id: user.uid, email: email.toLowerCase().trim(), username: username.trim(),
-        username_lowercase: username.toLowerCase().trim(), firstName: firstName.trim(), lastName: lastName.trim(),
-        displayName: `${firstName.trim()} ${lastName.trim()}`, profileComplete: false,
-        liked_jobs: [], matched_jobs: [], disliked_jobs: {},
-        createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+        id: user.uid,
+        email: email.toLowerCase().trim(),
+        username: username.trim(),
+        username_lowercase: username.toLowerCase().trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        displayName: `${firstName.trim()} ${lastName.trim()}`,
+        profileComplete: false,
+        role: role || 'worker', // Save the role here, default to 'worker' if not provided
+        liked_jobs: [],
+        matched_jobs: [],
+        disliked_jobs: {},
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
       Toast.show({ type: 'success', text1: 'החשבון נוצר! 🎉', text2: 'אנא התחבר כדי להמשיך.' });
-      navigation.replace('Login');
+      // navigation.replace('Login');
     } catch (err: any) {
       console.error("Registration Error:", err.code, err.message);
       let message = 'אירעה שגיאה ביצירת החשבון.';
@@ -125,7 +137,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       setLoading(false);
     }
   };
-  
+
   const styles = makeStyles(theme);
 
   const renderInput = (
@@ -143,7 +155,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         <PaperTextInput
           label={label} value={value} onChangeText={setter}
           onBlur={async () => { const error = await validateField(fieldKey as string, value); setErrors(prev => ({ ...prev, [fieldKey]: error })); }}
-          mode="outlined" style={styles.input} 
+          mode="outlined" style={styles.input}
           secureTextEntry={secure && !currentShowPassword}
           keyboardType={keyboardType} autoCapitalize={autoCapitalize} error={!!errors[fieldKey]}
           maxLength={maxLength} theme={{ roundness: theme.roundness }}
@@ -153,7 +165,6 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
             : undefined
           }
         />
-        {/* HelperText should align right by default in RTL */}
         {errors[fieldKey] && <HelperText type="error" visible={!!errors[fieldKey]} style={styles.helperText}>{errors[fieldKey]}</HelperText>}
       </View>
     );
@@ -199,7 +210,6 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       </View>
 
       <View style={styles.footer}>
-         {/* Added writingDirection: 'rtl' for robust mixed content rendering */}
         <PaperText variant='bodyMedium' style={[styles.footerTextBase, { writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
           יש לך כבר חשבון?{' '}
           <PaperText
@@ -223,27 +233,21 @@ const makeStyles = (theme: AppTheme) => StyleSheet.create({
   form: { width: '100%' },
   inputContainer: { marginBottom: theme.spacing.m },
   input: {
-    // Explicitly set textAlign for TextInput if global RTL doesn't suffice
-    // or if PaperTextInput doesn't automatically align placeholder/text to right in RTL.
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
-  helperText: {
-    // HelperText should align right by default in RTL.
-    // If not, add: textAlign: I18nManager.isRTL ? 'right' : 'left',
-    // writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr',
-  },
-  usernameLoader: { marginRight: theme.spacing.m }, // This will be on the left in RTL if input text is on the right
-  optionsRow: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.m, minHeight: 40 }, // Reversed in RTL
-  switchContainer: { flexDirection: 'row', alignItems: 'center' }, // Items reversed in RTL
+  helperText: {},
+  usernameLoader: { marginRight: theme.spacing.m },
+  optionsRow: { flexDirection: 'row', alignItems: 'center', marginVertical: theme.spacing.m, minHeight: 40 },
+  switchContainer: { flexDirection: 'row', alignItems: 'center' },
   rememberMeText: {
-    marginRight: I18nManager.isRTL ? theme.spacing.s : 0, // Space between text (now on right) and switch (now on left)
+    marginRight: I18nManager.isRTL ? theme.spacing.s : 0,
     marginLeft: !I18nManager.isRTL ? theme.spacing.s : 0,
     color: theme.colors.onSurface,
   },
   button: { marginTop: theme.spacing.m },
   buttonContent: { paddingVertical: theme.spacing.s },
   footer: { marginTop: theme.spacing.l, alignItems: 'center' },
-  footerTextBase: { // Base style for footer text
+  footerTextBase: {
     color: theme.colors.onSurface,
   },
   loginLink: { color: theme.colors.secondary, fontWeight: 'bold' }

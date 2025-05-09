@@ -1,7 +1,7 @@
 // src/screens/LoginScreen.tsx
 
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Animated, Easing, ScrollView, StyleSheet, I18nManager } from 'react-native'; // Added I18nManager
+import { View, Animated, Easing, ScrollView, StyleSheet, I18nManager } from 'react-native';
 import {
   TextInput as PaperTextInput,
   Button as PaperButton,
@@ -14,8 +14,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { auth } from '../api/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { AuthStackParamList } from '../navigation/AuthNavigator'; // Adjust path if needed
-import { AppTheme, useAppTheme } from '../styles/theme'; // Import useAppTheme
+import { AuthStackParamList } from '../navigation/AuthNavigator';
+// Remove this import: import { Home } from '../navigation/AppNavigator';
+import { AppTheme, useAppTheme } from '../styles/theme';
 
 // Placeholder Function
 const ensureUserProfileExists = async () => {
@@ -23,11 +24,8 @@ const ensureUserProfileExists = async () => {
   return Promise.resolve();
 };
 
-// Define LoginScreenProps using NativeStackScreenProps if not already defined
-// type LoginScreenProps = NativeStackScreenProps<AuthStackParamList, 'Login'>; // Already provided by user
-
 export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthStackParamList, 'Login'>) {
-  const theme = useAppTheme(); // Use your custom typed theme hook
+  const theme = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,7 +44,6 @@ export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthS
 
   const handleLogin = async () => {
     if (!email || !password) {
-      // Assuming Toast messages are already translated or will be handled by an i18n library
       Toast.show({ type: 'error', text1: 'שדות חסרים', text2: 'אנא הזן אימייל וסיסמה.' });
       return;
     }
@@ -55,10 +52,11 @@ export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthS
       await signInWithEmailAndPassword(auth, email, password);
       await ensureUserProfileExists();
       Toast.show({ type: 'success', text1: 'התחברת בהצלחה!', text2: 'ברוך שובך 👋' });
-      navigation.replace('Home'); // Adjust 'Home' as needed
+      // Remove this line: navigation.replace('Home');
+      // The RootNavigator will automatically handle the transition based on auth state.
     } catch (error: any) {
       console.error("Login Error:", error.code, error.message);
-      let message = 'אירעה שגיאה לא ידועה.'; // Default Hebrew error
+      let message = 'אירעה שגיאה לא ידועה.';
       if (error.code) {
         switch (error.code) {
           case 'auth/invalid-email': message = 'אנא הזן כתובת אימייל חוקית.'; break;
@@ -76,7 +74,6 @@ export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthS
     }
   };
 
-  // Generate styles using the theme
   const styles = makeStyles(theme);
 
   return (
@@ -96,21 +93,21 @@ export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthS
 
       <View style={styles.form}>
         <PaperTextInput
-          label="אימייל" // Translated
+          label="אימייל"
           value={email}
           onChangeText={setEmail}
           mode="outlined"
-          style={styles.input} // Contains textAlign: 'right' for explicit RTL input
+          style={styles.input}
           keyboardType="email-address"
           autoCapitalize="none"
           theme={{ roundness: theme.roundness }}
         />
         <PaperTextInput
-          label="סיסמה" // Translated
+          label="סיסמה"
           value={password}
           onChangeText={setPassword}
           mode="outlined"
-          style={styles.input} // Contains textAlign: 'right'
+          style={styles.input}
           secureTextEntry={!showPassword}
           right={
             <PaperTextInput.Icon
@@ -149,11 +146,10 @@ export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthS
       </View>
 
       <View style={styles.footer}>
-        {/* Added writingDirection: 'rtl' for robust mixed content rendering */}
         <PaperText variant='bodyMedium' style={[styles.footerTextBase, { writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr' }]}>
           חדש פה?{' '}
           <PaperText
-            onPress={() => !loading && navigation.navigate('Register')}
+            onPress={() => !loading && navigation.navigate('RoleScreen')}
             style={styles.registerLink}
           >
             הרשמה
@@ -164,7 +160,6 @@ export default function LoginScreen({ navigation }: NativeStackScreenProps<AuthS
   );
 }
 
-// Function to generate styles based on the theme
 const makeStyles = (theme: AppTheme) => StyleSheet.create({
   animatedScroll: {
     flex: 1,
@@ -181,12 +176,11 @@ const makeStyles = (theme: AppTheme) => StyleSheet.create({
   },
   headerText: {
     color: theme.colors.primary,
-    textAlign: 'center', // Center alignment is fine for headers
-    // Font variant handles font family, size, weight from theme.fonts
+    textAlign: 'center',
   },
   subHeaderText: {
     color: theme.colors.onSurface,
-    textAlign: 'center', // Center alignment is fine
+    textAlign: 'center',
     marginTop: theme.spacing.s,
   },
   form: {
@@ -194,30 +188,23 @@ const makeStyles = (theme: AppTheme) => StyleSheet.create({
   },
   input: {
     marginBottom: theme.spacing.m,
-    // Explicitly set textAlign for TextInput if global RTL doesn't suffice
-    // or if PaperTextInput doesn't automatically align placeholder/text to right in RTL.
-    // For Hebrew, text should naturally flow RTL.
     textAlign: I18nManager.isRTL ? 'right' : 'left',
   },
   optionsRow: {
-    flexDirection: 'row', // Will be reversed in RTL
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: theme.spacing.m,
     minHeight: 40,
   },
   switchContainer: {
-    flexDirection: 'row', // Switch appears first (right in RTL), then text
+    flexDirection: 'row',
     alignItems: 'center',
   },
   rememberMeText: {
-    // If visual order in RTL is [Text] [Switch], marginRight creates space.
-    // If LTR was [Switch] [Text], and RTL reverses to [Text] [Switch],
-    // then the text needs margin on its right to space it from the switch.
     marginRight: I18nManager.isRTL ? theme.spacing.s : 0,
     marginLeft: !I18nManager.isRTL ? theme.spacing.s : 0,
     color: theme.colors.onSurface,
-    // writingDirection: I18nManager.isRTL ? 'rtl' : 'ltr', // Usually not needed if parent is already RTL
   },
   button: {
     marginTop: theme.spacing.s,
@@ -229,9 +216,8 @@ const makeStyles = (theme: AppTheme) => StyleSheet.create({
     marginTop: theme.spacing.l,
     alignItems: 'center',
   },
-  footerTextBase: { // Base style for footer text
+  footerTextBase: {
     color: theme.colors.onSurface,
-    // textAlign will be handled by writingDirection or system default for RTL
   },
   registerLink: {
     color: theme.colors.secondary,

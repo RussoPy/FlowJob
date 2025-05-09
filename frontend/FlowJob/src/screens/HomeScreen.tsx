@@ -1,32 +1,82 @@
 // src/screens/HomeScreen.tsx
 
 import React, { useState } from 'react';
-import { BottomNavigation, Text as PaperText } from 'react-native-paper';
-import { SafeAreaView, StyleSheet, View } from 'react-native'; // Added View for more flexible centering
-import { useAppTheme, AppTheme } from '../styles/theme'; // Import useAppTheme and AppTheme type
+import { BottomNavigation, Text as PaperText, Button as PaperButton } from 'react-native-paper'; // Import Button as PaperButton
+import { SafeAreaView, StyleSheet, View } from 'react-native';
+import Toast from 'react-native-toast-message'; // Import Toast
+
+import { useAppTheme, AppTheme } from '../styles/theme';
+import { auth } from '../api/firebase'; // Import auth from your Firebase config
+import { signOut } from 'firebase/auth'; // Import signOut from Firebase Auth
 
 // --- Placeholder Screens (Replace with your actual implementations) ---
-// Updated to use useAppTheme and better styling from theme
 const PlaceholderScreen = ({ routeTitle }: { routeTitle: string }) => {
-  const theme = useAppTheme(); // Use your custom hook
+  const theme = useAppTheme();
 
-  // Create styles within the component or pass theme to a style function
   const placeholderStyles = StyleSheet.create({
     container: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: theme.colors.background, // Use theme background
-      padding: theme.spacing.l, // Use theme spacing
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.l,
     },
     text: {
-      color: theme.colors.onBackground, // Use theme text color on background
+      color: theme.colors.onBackground,
       textAlign: 'center',
+      marginBottom: theme.spacing.m, // Added margin for spacing
+    },
+    button: {
+      marginTop: theme.spacing.m,
     },
   });
 
+  // Conditionally render a sign out button on the Profile screen
+  if (routeTitle === 'Profile') {
+    const handleSignOut = async () => {
+      try {
+        await signOut(auth); // Call Firebase signOut
+        Toast.show({
+          type: 'success',
+          text1: 'התנתקת בהצלחה!', // Hebrew for "Signed out successfully!"
+          text2: 'נתראה בפעם הבאה 👋', // Hebrew for "See you next time 👋"
+        });
+        // The RootNavigator (src/navigation/RootNavigator.tsx) will automatically
+        // detect the authentication state change and navigate the user back to the AuthNavigator (login screen).
+      } catch (error: any) {
+        console.error("Sign out error:", error);
+        Toast.show({
+          type: 'error',
+          text1: 'שגיאת התנתקות', // Hebrew for "Sign out error"
+          text2: error.message || 'אירעה שגיאה בהתנתקות.', // Hebrew for "An error occurred during sign out."
+        });
+      }
+    };
+
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <View style={placeholderStyles.container}>
+          <PaperText variant="headlineMedium" style={placeholderStyles.text}>
+            {routeTitle} Content
+          </PaperText>
+          <PaperText variant="bodyMedium" style={placeholderStyles.text}>
+            (This is a placeholder)
+          </PaperText>
+          <PaperButton
+            mode="contained"
+            onPress={handleSignOut}
+            style={placeholderStyles.button}
+            contentStyle={{ paddingVertical: theme.spacing.s }} // Use theme spacing
+          >
+            התנתקות {/* Hebrew for "Sign Out" */}
+          </PaperButton>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={{flex: 1, backgroundColor: theme.colors.background}}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <View style={placeholderStyles.container}>
         <PaperText variant="headlineMedium" style={placeholderStyles.text}>
           {routeTitle || 'Screen'} Content
@@ -45,9 +95,8 @@ const ProfileScreen = () => <PlaceholderScreen routeTitle="Profile" />;
 const ChatScreen = () => <PlaceholderScreen routeTitle="Matches" />;
 // --- End Placeholder Screens ---
 
-
 export default function HomeScreen() {
-  const theme = useAppTheme(); // Use your custom hook for the main component theme
+  const theme = useAppTheme();
   const [index, setIndex] = useState(1); // Default to 'match' screen (index 1)
 
   const [routes] = useState([
@@ -56,13 +105,11 @@ export default function HomeScreen() {
     { key: 'chat', title: 'Matches', focusedIcon: 'chat', unfocusedIcon: 'chat-outline', component: ChatScreen },
   ]);
 
-  // Render Scene map - needed by BottomNavigation V5+
-  // Ensure the component type is correct if they take props
   const renderScene = BottomNavigation.SceneMap(
     routes.reduce((acc, route) => {
       acc[route.key] = route.component;
       return acc;
-    }, {} as { [key: string]: React.ComponentType<any> }) // Type assertion for SceneMap
+    }, {} as { [key: string]: React.ComponentType<any> })
   );
 
   return (
@@ -70,27 +117,11 @@ export default function HomeScreen() {
       navigationState={{ index, routes }}
       onIndexChange={setIndex}
       renderScene={renderScene}
-      // --- Theming Applied ---
-      activeColor={theme.colors.primary} // Active icon and label color
-      inactiveColor={theme.colors.onSurfaceVariant} // Inactive icon and label color (using onSurfaceVariant for muted)
-      barStyle={{ backgroundColor: theme.colors.surface }} // Background of the navigation bar
-      // theme={theme} // PaperProvider should handle this, but explicitly passing can ensure it
-      // For V5, ensure the theme prop is typed correctly if used: theme={theme as any} or ensure full MD3 compatibility
-      
-      // Scene animation props
+      activeColor={theme.colors.primary}
+      inactiveColor={theme.colors.onSurfaceVariant}
+      barStyle={{ backgroundColor: theme.colors.surface }}
       sceneAnimationEnabled={true}
-      sceneAnimationType="opacity" // 'shifting' or 'opacity'
-      // labelMaxLines={1} // Ensure labels don't wrap if too long
-
-      // If you want to customize the indicator (the ripple effect or underline for active tab):
-      // activeIndicatorStyle={{ backgroundColor: theme.colors.primaryContainer }} // Example
+      sceneAnimationType="opacity"
     />
   );
 }
-
-// --- Styles (Mostly for placeholders, now integrated into PlaceholderScreen or defined there) ---
-// No global styles needed here if PlaceholderScreen handles its own,
-// or if general layout is handled by SafeAreaView + theme.
-// const styles = StyleSheet.create({
-//   // placeholderContainer is now part of the PlaceholderScreen component for better encapsulation
-// });
